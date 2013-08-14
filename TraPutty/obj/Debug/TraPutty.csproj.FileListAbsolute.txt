@@ -1,0 +1,11 @@
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\bin\Debug\TraPutty.exe
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\bin\Debug\TraPutty.pdb
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\ResolveAssemblyReference.cache
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\TraPutty.MainForm.resources
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\TraPutty.Properties.Resources.resources
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\TraPutty.SettingForm.resources
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\TraPutty.csproj.GenerateResource.Cache
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\TraPutty.exe
+E:\Programming Sources\Windows Projects\traputty\TransparentizeWindow\obj\Debug\TraPutty.pdb
+E:\Programming Sources\Windows Projects\traputty\TraPutty\obj\Debug\TraPutty.exe
+E:\Programming Sources\Windows Projects\traputty\TraPutty\obj\Debug\TraPutty.pdb

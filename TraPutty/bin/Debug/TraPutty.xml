@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<ApplicationSetting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <alpha>210</alpha>
+  <puttysAreTransparent>false</puttysAreTransparent>
+  <notTransparentPuttySetting>true</notTransparentPuttySetting>
+  <ngwords>
+    <string>sidebar</string>
+    <string>Saezuri</string>
+  </ngwords>
+</ApplicationSetting>
