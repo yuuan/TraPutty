@@ -43,6 +43,7 @@ namespace TraPutty
 
 		private List<ProcessInfo> processList = new List<ProcessInfo>();
 		private ApplicationSetting setting = new ApplicationSetting();
+        private SettingForm settingForm = new SettingForm();
 
 		private void SaveSetting() {
 			try {
@@ -153,13 +154,18 @@ namespace TraPutty
 
 		public MainForm() {
 			InitializeComponent();
+            this.ShowInTaskbar = false;
+            this.WindowState = FormWindowState.Minimized;
 			this.Enabled = false;
-		}
+
+            LoadSettings();
+            ResetProcessesInfo();
+
+            timer.Enabled = true;
+        }
 
 		private void MainForm_Load(object sender, EventArgs e) {
-			LoadSettings();
-			ResetProcessesInfo();
-			timer.Enabled = true;
+            this.Hide();
 		}
 
 		private void MainForm_FormClosed(object sender, FormClosedEventArgs e) {
@@ -168,6 +174,8 @@ namespace TraPutty
 
 		private void contextMenuStrip_Opening(object sender, CancelEventArgs e) {
 			this.Cursor = Cursors.WaitCursor;
+
+            this.TopMost = false;
 
 			ToolStripSeparator menuSep1 = new ToolStripSeparator();
 			ToolStripSeparator menuSep2 = new ToolStripSeparator();
@@ -202,17 +210,20 @@ namespace TraPutty
 		}
 
 		private void menuItemOption_Click(object sender, EventArgs e) {
-			SettingForm dialog = new SettingForm(this.setting);
-			DialogResult result = dialog.ShowDialog(this);
-			if (result == DialogResult.OK) {
-				this.setting = dialog.GetSetting();
-				SaveSetting();
-			}
+            settingForm.SetSetting(this.setting);
+
+            if (settingForm.Visible == false) {
+                DialogResult result = settingForm.ShowDialog(this);
+			    if (result == DialogResult.OK) {
+				    this.setting = settingForm.GetSetting();
+				    SaveSetting();
+			    }
+            }
 		}
 
 		private void menuItemExit_Click(object sender, EventArgs e) {
 			notifyIcon.Visible = false;
-			this.Close();
+            Application.Exit();
 		}
 
 		private void menuItemProcess_Click(object sender, EventArgs e) {
@@ -236,5 +247,9 @@ namespace TraPutty
 		private void labelTitle_Click(object sender, EventArgs e) {
 			this.Hide();
 		}
+
+        private void MainForm_Click(object sender, EventArgs e) {
+            this.Hide();
+        }
     }
 }

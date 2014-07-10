@@ -14,10 +14,18 @@ namespace TraPutty
 	{
 		private ApplicationSetting setting;
 
+        public SettingForm() {
+            InitializeComponent();
+        }
+
 		public SettingForm(ApplicationSetting setting) {
 			this.setting = setting;
 			InitializeComponent();
 		}
+
+        public void SetSetting(ApplicationSetting setting) {
+            this.setting = setting;
+        }
 
 		public ApplicationSetting GetSetting() {
 			return this.setting;
