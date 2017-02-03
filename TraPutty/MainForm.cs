@@ -8,197 +8,128 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Diagnostics;
-using System.Xml.Serialization;
-using System.IO;
 
 namespace TraPutty
 {
     public partial class MainForm : Form
     {
-		private class ProcessInfo
-		{
-			public bool transparent = false;
-			public IntPtr hWnd = IntPtr.Zero;
-			public string name;
-			public string title;
-			public bool exists = true;
+        /// <summary>
+        /// 設定
+        /// </summary>
+        private ApplicationSetting settings = new ApplicationSetting();
 
-			public ProcessInfo(IntPtr hWnd, string name, string title) {
-				this.hWnd = hWnd;
-				this.name = name;
-				this.title = title;
-			}
-
-			public ProcessInfo(Process process) {
-				Update(process);
-			}
-
-			public void Update(Process process) {
-				this.hWnd = process.MainWindowHandle;
-				this.name = process.ProcessName;
-				this.title = process.MainWindowTitle;
-				this.exists = true;
-			}
-		}
-
-		private List<ProcessInfo> processList = new List<ProcessInfo>();
-		private ApplicationSetting setting = new ApplicationSetting();
+        /// <summary>
+        /// 設定を変更するためのフォーム
+        /// </summary>
         private SettingForm settingForm = new SettingForm();
 
-		private void SaveSetting() {
-			try {
-				XmlSerializer sirializer = new XmlSerializer(typeof(ApplicationSetting));
-				FileStream stream = new FileStream("TraPutty.xml", FileMode.Create);
-				sirializer.Serialize(stream, this.setting);
-				stream.Close();
-			}
-			catch { }
+        /// <summary>
+        /// 透過する PuTTY ウィンドウのリスト
+        /// </summary>
+        private WindowList putties = new WindowList();
+
+        /// <summary>
+        /// PuTTY ウィンドウを探してターゲットに追加する
+        /// </summary>
+        private void SearchPutty() {
+            this.putties.RemoveAll(window => window.NotExists);
+
+            foreach (var process in Process.GetProcesses()) {
+                if (Window.IsPuttyProcess(process)) {
+                    this.putties.FindOrCreate(process);
+                }
+            }
+        }
+
+        /// <summary>
+        /// PuTTY ウィンドウに透過状態を適用する
+        /// </summary>
+        private void TransparentPutty() {
+            foreach (var window in this.putties) {
+                if (! window.IsPuttyConfig || ! this.settings.notTransparentPuttySetting) {
+                    window.Transparency = this.settings.puttysAreTransparent ? Window.NOT_TRANSPARENT : this.settings.alpha;
+                }
+            }
+        }
+
+        /// <summary>
+        /// PuTTY の透過状態を切り替える
+        /// </summary>
+        private void ToggleTransparencyOfPuttys() {
+			this.settings.puttysAreTransparent = ! this.settings.puttysAreTransparent;
+
+            this.TransparentPutty();
 		}
 
-		private void LoadSettings() {
-			try {
-				XmlSerializer serializer = new XmlSerializer(typeof(ApplicationSetting));
-				FileStream stream = new FileStream("TraPutty.xml", FileMode.Open);
-				this.setting = (ApplicationSetting)serializer.Deserialize(stream);
-			}
-			catch {
-				this.setting = new ApplicationSetting();
-			}
-		}
-
-		private void ResetProcessesInfo() {
-			for (int i = 0; i < processList.Count; i++) {
-				processList[i].exists = false;
-			}
-
-			Process[] processes = Process.GetProcesses();
-			foreach (Process process in processes) {
-				if (process.MainWindowHandle != IntPtr.Zero) {
-					bool ng = false;
-					foreach (string ngword in this.setting.ngwords) {
-						if (process.ProcessName.Equals(ngword, StringComparison.CurrentCultureIgnoreCase)) ng = true;
-					}
-					if (!ng) {
-						bool exists = false;
-						for (int i = 0; i < processList.Count; i++) {
-							ProcessInfo processInfo = processList[i];
-							if (processInfo.hWnd == process.MainWindowHandle) {
-								int exStyle = Win32API.GetWindowLong(processInfo.hWnd, Win32API.GWL_EXSTYLE);
-								if ((exStyle & (int)Win32API.WS_EX.LAYERED) != 0) {
-									byte alpha;
-									Win32API.GetLayeredWindowAttributes(processInfo.hWnd, 0, out alpha, 0);
-									processInfo.transparent = (alpha != 255) ? true : false;
-								}
-								processInfo.Update(process);
-								exists = true;
-								break;
-							}
-						}
-						if (!exists) {
-							ProcessInfo pi = new ProcessInfo(process);
-							this.processList.Add(pi);
-
-							if (this.setting.puttysAreTransparent) {
-								SetTransparentForPutty(pi, true);
-							}
-						}
-					}
-				}
-			}
-
-			processList.Sort(delegate(ProcessInfo x, ProcessInfo y) {
-				return x.name.CompareTo(y.name);
-			});
-
-			for (int i = 0; i < processList.Count; i++ ) {
-				if (!processList[i].exists) {
-					processList.Remove(processList[i]);
-				}
-			}
-		}
-
-		private bool SetTransparent(IntPtr hWnd, bool transparent) {
-			if (transparent) {
-				int exStyle = Win32API.GetWindowLong(hWnd, Win32API.GWL_EXSTYLE);
-				Win32API.SetWindowLong(hWnd, Win32API.GWL_EXSTYLE, exStyle | (int)Win32API.WS_EX.LAYERED);
-
-				return Win32API.SetLayeredWindowAttributes(hWnd, 0, this.setting.alphaValue, Win32API.LWA_ALPHA);
-			}
-			else {
-				return Win32API.SetLayeredWindowAttributes(hWnd, 0, 255, Win32API.LWA_ALPHA);
-			}
-		}
-
-		private void SetTransparentForAllPutty() {
-			this.setting.puttysAreTransparent = !this.setting.puttysAreTransparent;
-			foreach (ProcessInfo process in processList) {
-				this.SetTransparentForPutty(process, this.setting.puttysAreTransparent);
-			}
-		}
-
-		private void SetTransparentForPutty(ProcessInfo process, bool transparent) {
-			if (process.name.Equals("putty", StringComparison.CurrentCultureIgnoreCase)) {
-				if (this.setting.notTransparentPuttySetting && IsSetting(process))
-					transparent = false;
-				SetTransparent(process.hWnd, transparent);
-			}
-		}
-
-		private bool IsSetting(ProcessInfo process) {
-			if (process.title.Equals("PuTTY 設定"))
-				return true;
-			if (process.title.Equals("PuTTY Configuration"))
-				return true;
-			return false;
-		}
-
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
 		public MainForm() {
 			InitializeComponent();
             this.ShowInTaskbar = false;
             this.WindowState = FormWindowState.Minimized;
 			this.Enabled = false;
 
-            LoadSettings();
-            ResetProcessesInfo();
+            this.settings = ApplicationSetting.Load();
+
+            this.SearchPutty();
 
             timer.Enabled = true;
         }
 
+        /// <summary>
+        /// 起動時
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void MainForm_Load(object sender, EventArgs e) {
             this.Hide();
 		}
 
+        /// <summary>
+        /// 終了前
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void MainForm_FormClosed(object sender, FormClosedEventArgs e) {
-			SaveSetting();
+			this.settings.Save();
 		}
 
+        /// <summary>
+        /// タスクトレイからメニューを開いたとき
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void contextMenuStrip_Opening(object sender, CancelEventArgs e) {
 			this.Cursor = Cursors.WaitCursor;
 
             this.TopMost = false;
 
-			ToolStripSeparator menuSep1 = new ToolStripSeparator();
-			ToolStripSeparator menuSep2 = new ToolStripSeparator();
-			ToolStripMenuItem menuOption = new ToolStripMenuItem("設定(&S)...");
+			var menuSep1 = new ToolStripSeparator();
+			var menuSep2 = new ToolStripSeparator();
+			var menuOption = new ToolStripMenuItem("設定(&S)...");
 			menuOption.Click += new EventHandler(this.menuItemOption_Click);
-			ToolStripMenuItem menuExit = new ToolStripMenuItem("終了(&X)");
+			var menuExit = new ToolStripMenuItem("終了(&X)");
 			menuExit.Click += new EventHandler(this.menuItemExit_Click);
 
-			ResetProcessesInfo();
 			contextMenuStrip.Items.Clear();
 			contextMenuStrip.ImageList = this.imageList;
 
-			foreach (ProcessInfo process in this.processList) {
-				if (process.exists) {
-					ToolStripMenuItem item = new ToolStripMenuItem(process.name);
-					item.ToolTipText = process.title;
-					item.Tag = process;
-					item.ImageIndex = (process.transparent) ? 1 : 0;
-					item.Checked = process.transparent;
-					item.Text += (process.transparent) ? " *" : "";
-					item.Click += new EventHandler(this.menuItemProcess_Click);
-					contextMenuStrip.Items.Add(item);
-				}
+			foreach (var process in Process.GetProcesses().OrderBy(p => p.ProcessName)) {
+                if (process.MainWindowHandle != IntPtr.Zero) {
+                    if (! this.settings.ngwords.Contains(process.ProcessName)) {
+                        var window = new Window(process);
+
+                        var item = new ToolStripMenuItem(process.ProcessName);
+                        item.ToolTipText = process.MainWindowTitle;
+                        item.Tag = process;
+                        item.ImageIndex = window.IsTransparents ? 1 : 0;
+                        item.Checked = window.IsTransparents;
+                        item.Text += (window.IsTransparents) ? " *" : "";
+                        item.Click += new EventHandler(this.menuItemProcess_Click);
+                        contextMenuStrip.Items.Add(item);
+                    }
+                }
 			}
 
 			contextMenuStrip.Items.Add(menuSep1);
@@ -209,45 +140,84 @@ namespace TraPutty
 			this.Cursor = Cursors.Default;
 		}
 
+        /// <summary>
+        /// 設定メニュー
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void menuItemOption_Click(object sender, EventArgs e) {
-            settingForm.SetSetting(this.setting);
+            settingForm.SetSetting(this.settings);
 
             if (settingForm.Visible == false) {
-                DialogResult result = settingForm.ShowDialog(this);
+                var result = settingForm.ShowDialog(this);
 			    if (result == DialogResult.OK) {
-				    this.setting = settingForm.GetSetting();
-				    SaveSetting();
+				    this.settings = settingForm.GetSetting();
+				    this.settings.Save();
 			    }
             }
 		}
 
+        /// <summary>
+        /// 終了メニュー
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void menuItemExit_Click(object sender, EventArgs e) {
 			notifyIcon.Visible = false;
             Application.Exit();
 		}
 
+        /// <summary>
+        /// メニューからプロセスを選択したとき
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void menuItemProcess_Click(object sender, EventArgs e) {
-			ToolStripMenuItem item = (ToolStripMenuItem)sender;
-			ProcessInfo processInfo = (ProcessInfo)item.Tag;
+			var item = (ToolStripMenuItem)sender;
+			var process = (Process)item.Tag;
+            var window = new Window(process);
 
-			bool transparent = !processInfo.transparent;
-			if (SetTransparent(processInfo.hWnd, transparent)) {
-				processInfo.transparent = transparent;
-			}
+            if (window.IsTransparents) {
+                window.Transparency = Window.NOT_TRANSPARENT;
+            }
+            else {
+                window.Transparency = this.settings.alpha;
+            }
 		}
 
+        /// <summary>
+        /// ただちに PuTTY の透過状態を切り替える
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void notifyIcon_MouseDoubleClick(object sender, MouseEventArgs e) {
-			SetTransparentForAllPutty();
+			this.ToggleTransparencyOfPuttys();
 		}
 
+        /// <summary>
+        /// 定期的に
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void timer_Tick(object sender, EventArgs e) {
-			ResetProcessesInfo();
+            this.SearchPutty();
+            this.TransparentPutty();
 		}
 
+        /// <summary>
+        /// メインフォームのラベルをクリックしたら
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
 		private void labelTitle_Click(object sender, EventArgs e) {
 			this.Hide();
 		}
 
+        /// <summary>
+        /// メインフォームをクリックしたら
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void MainForm_Click(object sender, EventArgs e) {
             this.Hide();
         }

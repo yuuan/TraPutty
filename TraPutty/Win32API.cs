@@ -8,14 +8,15 @@ namespace TraPutty
 {
 	class Win32API
 	{
-		public const int GWL_ID = -12;
-		public const int GWL_STYLE = -16;
-		public const int GWL_EXSTYLE = -20;
-		public const int WS_EX_LAYERED = 0x80000;
-		public const int LWA_ALPHA = 0x2;
-		public const int LWA_COLORKEY = 0x1;
+        [Flags]
+        public enum GWL: int {
+		    ID = -12,
+		    STYLE = -16,
+		    EXSTYLE = -20,
+        }
 
 		// Window Styles
+        [Flags]
 		public enum WS : uint {
 			OVERLAPPED = 0,
 			POPUP = 0x80000000,
@@ -43,7 +44,8 @@ namespace TraPutty
 		}
 
 		// Extended Window Styles
-		public enum WS_EX : uint {
+        [Flags]
+		public enum WS_EX : int {
 			DLGMODALFRAME = 0x0001,
 			NOPARENTNOTIFY = 0x0004,
 			TOPMOST = 0x0008,
@@ -72,16 +74,25 @@ namespace TraPutty
 			NOACTIVATE = 0x08000000,
 		}
 
-		[DllImport("user32.dll")]
-		public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+        [Flags]
+        public enum LWA : uint {
+            COLORKEY = 0x1,
+            ALPHA = 0x2,
+        }
+
+        [DllImport("user32.dll")]
+        public static extern bool IsWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int GetWindowLong(IntPtr hWnd, GWL nIndex);
 
 		[DllImport("user32.dll")]
-		public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+		public static extern int SetWindowLong(IntPtr hWnd, GWL nIndex, WS_EX dwNewLong);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetLayeredWindowAttributes(IntPtr hwnd, uint crKey, out byte bAlpha, LWA dwFlags);
 
 		[DllImport("user32.dll")]
-		public static extern bool GetLayeredWindowAttributes(IntPtr hwnd, uint crKey, out byte bAlpha, uint dwFlags);
-
-		[DllImport("user32.dll", SetLastError = true)]
-		public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+		public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, LWA dwFlags);
 	}
 }

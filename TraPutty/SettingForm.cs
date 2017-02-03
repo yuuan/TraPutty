@@ -32,7 +32,7 @@ namespace TraPutty
 		}
 
 		private void SettingForm_Load(object sender, EventArgs e) {
-			this.numTransparent.Value = (int)this.setting.alphaValue;
+			this.numTransparent.Value = (int)this.setting.alpha;
 			this.chkNotTransparentPuttySetting.Checked = this.setting.notTransparentPuttySetting;
 		}
 
@@ -42,7 +42,7 @@ namespace TraPutty
 		}
 
 		private void buttonOk_Click(object sender, EventArgs e) {
-			this.setting.alphaValue = (byte)numTransparent.Value;
+			this.setting.alpha = (byte)numTransparent.Value;
 			this.setting.notTransparentPuttySetting = chkNotTransparentPuttySetting.Checked;
 			this.DialogResult = DialogResult.OK;
 			this.Close();
